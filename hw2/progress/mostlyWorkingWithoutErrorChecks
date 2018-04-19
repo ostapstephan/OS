@@ -1,0 +1,162 @@
+#include <stdlib.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <stdio.h>
+
+
+
+
+int same(char *target, char *Test,int sLink){
+    struct stat TarStat; 
+    struct stat TestStat; 
+    
+    FILE *fdTar, *fdtest;
+    int sbuf = 4096; 
+    char bufTar[sbuf];
+    char bufTest[sbuf];
+    int diff = 0;
+    int tar,tes;
+    char *HS[2] ={"hard","sym"};
+
+    stat(target,&TarStat);
+    stat(Test,&TestStat);
+
+
+    if((TestStat.st_ino)==(TarStat.st_ino)){
+        fprintf(stderr,"%s is a %slink to target nLinks = %i\n",Test,HS[sLink],(int)TestStat.st_nlink);
+        return 2;
+    }
+
+    if ( (TarStat.st_size==TestStat.st_size)){
+        fdTar = fopen(target,"r");
+        fdtest = fopen(Test,"r");
+       
+        tar = getc(fdTar);
+        tes = getc(fdtest);
+        
+        while ((tar!=EOF)&&(tar!=EOF)&&(tar==tes)){
+            tar = getc(fdTar);
+            tes = getc(fdtest);
+        } 
+   
+       if (tar==tes){
+           fprintf(stderr,"%s Matches Target File nLinks = %i\n",Test,(int)TestStat.st_nlink);
+           return 1;
+
+       }
+       else
+           return 0;
+        
+        fclose(fdTar);
+        fclose(fdtest);
+   } 
+    //int fdc = open(fdTest,O_RDONLY); //fd of check file
+    fprintf(stderr,"%s - 0\n",Test);
+    return 0;
+}
+
+
+int isDot(char const *name){//is it a dot or dot dot 
+    if (strcmp(name,".")==0)
+        return 0;
+    if (strcmp(name,"..")==0)
+        return 0;
+    return 1;
+}
+
+
+int search(char *path, char *target){ 
+    DIR *dp;
+    struct dirent *ds;
+    struct stat elemInfo; 
+    int hOrs = 0 ;
+    char pathn[1024]; 
+
+    dp = opendir(path); // this has to get reasonable path that is ./joey or ./joey/ostap
+    
+   // fprintf(stderr,"Start of search()\n");
+     
+    //chdir(path); //we need a path= path +/  + path kinda thing
+    //fprintf(stderr,"you are in %s \n",path); 
+    while (ds=readdir(dp)){ 
+        //fprintf(stderr,"%i \n",ds->d_type);
+        if(isDot(ds->d_name)==0){
+            continue;
+        }
+        
+        snprintf(pathn,sizeof(pathn),"%s/%s",path,ds->d_name); 
+        //fprintf(stderr,"--%s \n",pathn);
+        
+        lstat(pathn,&elemInfo); 
+        switch(elemInfo.st_mode & S_IFMT){
+            case S_IFREG:
+                if((hOrs= same(target,pathn,0))>0){
+                    /*if (hOrs==1){
+                        fprintf(stderr,"%s Matches Target File nLinks = %i\n", pathn,(int)elemInfo.st_nlink);//fprintf(stderr,"%i\n",same(target,pathn));//checks sameness and prints it
+                    }*/
+                }
+                //reg file
+                break;
+            case S_IFDIR:
+                //fprintf(stderr,"passes the dot and dir check: %s%i\n",ds->d_name,(S_ISDIR(elemInfo.st_mode)));
+                search(pathn,target);
+                //Directorly
+                break;
+            case S_IFLNK:
+                fprintf(stdout,"%s is a symlink \n",pathn); 
+
+                fprintf(stderr,"%i\n",same(target,pathn,1));//checks sameness and prints itor something  
+                 
+                //symlink file
+                break;
+            default:
+                break;
+        }       
+ 
+        /*if ((S_ISDIR(elemInfo.st_mode))){*/
+            /*fprintf(stderr,"passes the dot and dir check: %s\n\n",ds->d_name);*/
+            /*search(ds->d_name,target);*/
+            /*}*/
+        /*else fprintf(stderr,"%s\n", ds->d_name);*/
+    }
+    //chdir("..");
+    closedir(dp);
+    return 0; 
+}
+
+int main(int argc, char **argv){ 
+   // char c[]= ".."; 
+    
+    if(argc !=3){
+       fprintf(stderr,"Wrong amount of args\n");  
+    }
+    search(argv[1],argv[2]);
+    //printf("%i",(isDot(c))); 
+}
+
+
+
+
+
+ /* 
+        while((ra=read(fdTar,bufTar,sbuf)>0)&&(re=read(fdtest,bufTest,sbuf)>0)){
+            for(int x = 0; x<4096; x++){
+                
+                fprintf(stderr,"%c%c\n",bufTar[x],bufTest[x]);
+
+                if(bufTar[x]!=bufTest[x]){
+                       
+                    fprintf(stderr,"no match:%i%i\n",re,ra);
+                    diff =1; 
+                    break; 
+                }
+            }
+        }*/ 
+        

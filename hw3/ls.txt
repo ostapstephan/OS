@@ -1,0 +1,17 @@
+big.txt
+but.txt
+cat2.out
+cat.out
+ls.txt
+oshell
+oShell
+oshell.c
+oShell.c
+oshellCopy.c
+out.txt
+refer.txt
+shell.c
+shellscript2.sh
+shellscript.sh
+test
+test.c
